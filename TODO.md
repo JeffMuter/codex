@@ -1,0 +1,165 @@
+# Codex Development TODO
+
+## Phase 1: Core CLI Structure
+- [ ] Set up CLI framework (cobra or similar)
+  - [ ] Implement `codex ask` command
+  - [ ] Implement `codex config` command for setting paths
+  - [ ] Add `--screenshot` flag support
+  - [ ] Add `--verbose` flag for debugging
+- [ ] Configuration management
+  - [ ] Read from environment variables (CODEX_NIX_CONFIG, CODEX_DOTFILES)
+  - [ ] Support config file (~/.config/codex/config.yaml or similar)
+  - [ ] Implement config validation
+  - [ ] Add `codex config show` to display current configuration
+- [ ] Basic project structure
+  - [ ] Create package structure (cmd/, internal/, pkg/)
+  - [ ] Set up error handling patterns
+  - [ ] Add logging framework
+
+## Phase 2: Context Discovery & Analysis
+- [ ] Repository detection
+  - [ ] Implement git repository finder (traverse up from cwd)
+  - [ ] Parse basic repo metadata (remote, branch, recent commits)
+  - [ ] Handle non-git directories gracefully
+- [ ] Nix configuration parser
+  - [ ] Locate Nix config repository
+  - [ ] Parse .nix files for installed packages
+  - [ ] Extract system configuration
+  - [ ] Handle flakes vs traditional Nix configs
+  - [ ] Convert parsed data to JSON format for storage
+- [ ] Dotfiles/Home-manager parser
+  - [ ] Locate dotfiles repository
+  - [ ] Parse common config files (tmux, neovim, shell, etc.)
+  - [ ] Extract keybindings from various tools
+  - [ ] Handle both plain dotfiles and home-manager setups
+  - [ ] Convert parsed data to JSON format for storage
+- [ ] Filesystem context
+  - [ ] Capture current working directory
+  - [ ] Build parent directory hierarchy
+  - [ ] Include relevant files from current directory
+  - [ ] Serialize as JSON
+
+## Phase 3: Database & Caching (SQLite)
+- [ ] Database setup
+  - [ ] Set up goose migrations structure for SQLite
+  - [ ] Create initial schema for context cache
+  - [ ] Add tables for parsed configs with timestamps (store as JSON)
+  - [ ] Add indexes for efficient lookups
+  - [ ] Set SQLite pragmas for performance (WAL mode, etc.)
+  - [ ] Handle database location (~/.local/share/codex/codex.db or similar)
+- [ ] Context caching
+  - [ ] Implement cache key generation (config repo + hash)
+  - [ ] Cache parsed Nix configuration as JSON
+  - [ ] Cache parsed dotfiles/home-manager as JSON
+  - [ ] Add TTL or invalidation strategy (check file mtimes)
+  - [ ] Implement cache refresh logic
+  - [ ] Add `codex cache clear` command
+
+## Phase 4: Screenshot Support
+- [ ] Screenshot tool detection
+  - [ ] Detect available screenshot tools (scrot, maim, grim, etc.)
+  - [ ] Handle different display servers (X11, Wayland)
+  - [ ] Add fallback options if no tool found
+- [ ] Screenshot capture
+  - [ ] Implement screenshot capture via shell command
+  - [ ] Save to temporary location
+  - [ ] Clean up temp files after use
+  - [ ] Handle screenshot errors gracefully
+
+## Phase 5: AI Provider Integration
+- [ ] Provider interface
+  - [ ] Define common interface for AI providers
+  - [ ] Implement provider factory/registry
+  - [ ] Add configuration for provider selection
+- [ ] Anthropic Claude integration
+  - [ ] API client implementation
+  - [ ] Handle API key from environment/config
+  - [ ] Implement rate limiting
+  - [ ] Handle errors and retries
+- [ ] OpenAI integration
+  - [ ] API client implementation
+  - [ ] Support multiple models
+  - [ ] Handle API key from environment/config
+- [ ] Local LLM support
+  - [ ] Ollama integration
+  - [ ] Support for other local providers
+  - [ ] Handle local model availability checks
+- [ ] Provider configuration
+  - [ ] Add `codex config set-provider` command
+  - [ ] Store provider preference
+  - [ ] Allow per-query provider override
+
+## Phase 6: Query Processing
+- [ ] Context builder
+  - [ ] Combine all context sources into structured JSON format
+  - [ ] Calculate total context size (tokens/characters)
+  - [ ] Optimize context size (summarize, prioritize relevant parts)
+  - [ ] Handle screenshots (base64 encode, attach to request)
+  - [ ] Create system prompt with context
+- [ ] Context size validation
+  - [ ] Define context size thresholds (warn at X tokens, error at Y)
+  - [ ] Implement token estimation for different providers
+  - [ ] Show warning with size estimate and cost estimate if large
+  - [ ] Prompt user for confirmation before sending large context
+  - [ ] Add `--force` flag to skip confirmation
+  - [ ] Add `--no-context` flag to send query without context
+- [ ] Query handler
+  - [ ] Accept user query
+  - [ ] Build complete prompt with context
+  - [ ] Validate context size and get user confirmation if needed
+  - [ ] Send to selected AI provider
+  - [ ] Stream response to terminal
+  - [ ] Handle errors and provide fallback
+
+## Phase 7: Testing & Polish
+- [ ] Unit tests
+  - [ ] Test config parsing
+  - [ ] Test repository detection
+  - [ ] Test context building
+  - [ ] Test provider interface
+- [ ] Integration tests
+  - [ ] Test full query flow
+  - [ ] Test with sample config repositories
+  - [ ] Test error scenarios
+- [ ] Documentation
+  - [ ] Add code comments
+  - [ ] Update README with actual usage
+  - [ ] Add example configurations
+  - [ ] Document troubleshooting common issues
+- [ ] Polish
+  - [ ] Add progress indicators for slow operations
+  - [ ] Improve error messages
+  - [ ] Add shell completions
+  - [ ] Optimize performance
+
+## Phase 8: Advanced Features (Future)
+- [ ] Interactive mode
+  - [ ] Multi-turn conversations
+  - [ ] Context persistence across queries
+- [ ] Query history
+  - [ ] Store past queries (optional, privacy-conscious)
+  - [ ] Search through history
+  - [ ] Rerun past queries
+- [ ] Smart context selection
+  - [ ] Analyze query to determine relevant context
+  - [ ] Only include necessary config files
+  - [ ] Reduce token usage
+- [ ] Plugin system
+  - [ ] Support custom context providers
+  - [ ] Allow custom parsers for config formats
+
+## Questions & Decisions Made
+- **AI Backend**: Multiple providers (Anthropic, OpenAI, Local LLM)
+- **Priority**: Core CLI first, then context gathering
+- **Database**: SQLite for context caching (embedded, no server required)
+- **Config Format**: JSON for storing parsed configurations
+- **Context Size**: Warn user and require confirmation before sending large context
+- **Screenshots**: Shell out to existing tools (scrot, maim, grim)
+
+## Notes
+- Project uses Go 1.23 with Nix development environment
+- Database migrations via goose (SQLite backend)
+- Focus on being context-aware without being intrusive
+- Privacy-conscious design (local processing where possible)
+- All parsed context stored as JSON in SQLite
+- User confirmation required for large context to avoid unexpected API costs
