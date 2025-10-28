@@ -1,11 +1,7 @@
 package main
 
-import (
-	"fmt"
-	"log"
-)
+import "codex/cmd"
 
 func main() {
-	fmt.Println("hello world")
-	log.Println("hello world")
+	cmd.Execute()
 }

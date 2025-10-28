@@ -1,20 +1,42 @@
 # Codex Development TODO
 
-## Phase 1: Core CLI Structure
-- [ ] Set up CLI framework (cobra or similar)
-  - [ ] Implement `codex ask` command
-  - [ ] Implement `codex config` command for setting paths
-  - [ ] Add `--screenshot` flag support
-  - [ ] Add `--verbose` flag for debugging
+## Current Status (as of 2025-10-28)
+**What's Working:**
+- ✓ Cobra CLI framework integrated
+- ✓ `codex ask [question]` command with `--screenshot` and `--verbose` flags
+- ✓ `codex config show` displays environment variables
+- ✓ `codex config set [key] [value]` provides setup instructions
+- ✓ All help text and command structure in place
+- ✓ Binary builds successfully
+- ✓ Internal package structure created (internal/config, internal/context, internal/providers, internal/errors)
+
+**What's Next:**
+- Choose and integrate logging framework (zerolog or zap)
+- Update cmd/ files to use new internal packages
+- Configuration file support implementation (~/.config/codex/config.yaml)
+- Git repository detection and context gathering
+- Database setup with goose migrations
+
+---
+
+## Phase 1: Core CLI Structure ✓ (Partially Complete)
+- [x] Set up CLI framework (cobra)
+  - [x] Implement `codex ask` command with argument parsing
+  - [x] Implement `codex config` command group (show/set subcommands)
+  - [x] Add `--screenshot` flag support (parsing ready, capture logic pending)
+  - [x] Add `--verbose` flag for debugging
 - [ ] Configuration management
-  - [ ] Read from environment variables (CODEX_NIX_CONFIG, CODEX_DOTFILES)
+  - [x] Read from environment variables (CODEX_NIX_CONFIG, CODEX_DOTFILES)
   - [ ] Support config file (~/.config/codex/config.yaml or similar)
   - [ ] Implement config validation
-  - [ ] Add `codex config show` to display current configuration
-- [ ] Basic project structure
-  - [ ] Create package structure (cmd/, internal/, pkg/)
-  - [ ] Set up error handling patterns
-  - [ ] Add logging framework
+  - [x] Add `codex config show` to display current configuration
+  - [ ] Implement `codex config set` persistence (currently shows env var instructions)
+- [x] Basic project structure
+  - [x] Create cmd/ package with root, ask, config commands
+  - [x] Create internal/ package structure (config/, context/, providers/, errors/)
+  - [ ] Create pkg/ if needed for reusable libraries
+  - [x] Set up error handling patterns (internal/errors package)
+  - [ ] Add logging framework (structured logging, e.g., zerolog or zap) - PENDING USER CHOICE
 
 ## Phase 2: Context Discovery & Analysis
 - [ ] Repository detection
@@ -67,20 +89,23 @@
   - [ ] Handle screenshot errors gracefully
 
 ## Phase 5: AI Provider Integration
-- [ ] Provider interface
-  - [ ] Define common interface for AI providers
-  - [ ] Implement provider factory/registry
+- [x] Provider interface
+  - [x] Define common interface for AI providers (internal/providers/provider.go)
+  - [x] Implement provider factory/registry
   - [ ] Add configuration for provider selection
 - [ ] Anthropic Claude integration
+  - [x] Provider skeleton created (internal/providers/anthropic.go)
   - [ ] API client implementation
   - [ ] Handle API key from environment/config
   - [ ] Implement rate limiting
   - [ ] Handle errors and retries
 - [ ] OpenAI integration
+  - [x] Provider skeleton created (internal/providers/openai.go)
   - [ ] API client implementation
   - [ ] Support multiple models
   - [ ] Handle API key from environment/config
 - [ ] Local LLM support
+  - [x] Provider skeleton created (internal/providers/ollama.go)
   - [ ] Ollama integration
   - [ ] Support for other local providers
   - [ ] Handle local model availability checks
@@ -156,10 +181,28 @@
 - **Context Size**: Warn user and require confirmation before sending large context
 - **Screenshots**: Shell out to existing tools (scrot, maim, grim)
 
+## Recent Commits & Progress
+- **[uncommitted]** (2025-10-28): Created internal package structure
+  - Created internal/config/config.go with full config management (load, save, validate)
+  - Created internal/context/types.go with context data structures
+  - Created internal/context/gatherer.go with context gathering interface
+  - Created internal/providers/provider.go with AI provider interface
+  - Created internal/providers/anthropic.go, openai.go, ollama.go with provider skeletons
+  - Created internal/errors/errors.go with standardized error handling
+  - Added support for YAML config files, environment variables, and multiple AI providers
+- **b2b1991** (2025-10-28): Added Cobra framework and implemented core CLI structure
+  - Created cmd/root.go, cmd/ask.go, cmd/config.go
+  - Implemented `ask`, `config show`, and `config set` commands
+  - Added --screenshot and --verbose flags
+  - Updated main.go to use Cobra's Execute()
+- **89e4753**: Initial main func and TODO setup
+- **a6e2d4d**: First push with project structure
+
 ## Notes
-- Project uses Go 1.23 with Nix development environment
-- Database migrations via goose (SQLite backend)
+- Project uses Go 1.24.4 with Nix development environment
+- Database migrations via goose (SQLite backend) - not yet implemented
 - Focus on being context-aware without being intrusive
 - Privacy-conscious design (local processing where possible)
-- All parsed context stored as JSON in SQLite
+- All parsed context will be stored as JSON in SQLite
 - User confirmation required for large context to avoid unexpected API costs
+- Cobra provides auto-generated shell completion support
