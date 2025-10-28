@@ -4,29 +4,21 @@ import "time"
 
 // Context represents all gathered context information
 type Context struct {
-	Timestamp    time.Time          `json:"timestamp"`
-	Repository   *RepositoryContext `json:"repository,omitempty"`
-	Filesystem   *FilesystemContext `json:"filesystem,omitempty"`
-	NixConfig    *NixContext        `json:"nix_config,omitempty"`
-	Dotfiles     *DotfilesContext   `json:"dotfiles,omitempty"`
-	Screenshot   *Screenshot        `json:"screenshot,omitempty"`
+	Timestamp         time.Time            `json:"timestamp"`
+	ConfiguredRepos   []*RepositoryContext `json:"configured_repos,omitempty"`
+	CurrentRepo       *RepositoryContext   `json:"current_repo,omitempty"`
+	Filesystem        *FilesystemContext   `json:"filesystem,omitempty"`
+	NixConfig         *NixContext          `json:"nix_config,omitempty"`
+	Dotfiles          *DotfilesContext     `json:"dotfiles,omitempty"`
+	Screenshot        *Screenshot          `json:"screenshot,omitempty"`
 }
 
 // RepositoryContext contains git repository information
 type RepositoryContext struct {
-	Path          string   `json:"path"`
-	Remote        string   `json:"remote,omitempty"`
-	Branch        string   `json:"branch"`
-	RecentCommits []Commit `json:"recent_commits,omitempty"`
-	Status        string   `json:"status,omitempty"`
-}
-
-// Commit represents a git commit
-type Commit struct {
-	Hash      string    `json:"hash"`
-	Author    string    `json:"author"`
-	Date      time.Time `json:"date"`
-	Message   string    `json:"message"`
+	Path   string `json:"path"`
+	Remote string `json:"remote,omitempty"`
+	Source string `json:"source,omitempty"` // Original source (URL or path)
+	Type   string `json:"type,omitempty"`   // "local" or "remote" or "current"
 }
 
 // FilesystemContext contains current directory and file information
@@ -74,10 +66,10 @@ type Screenshot struct {
 
 // GatherOptions configures what context to gather
 type GatherOptions struct {
-	IncludeRepository bool
-	IncludeFilesystem bool
-	IncludeNixConfig  bool
-	IncludeDotfiles   bool
-	CaptureScreenshot bool
-	WorkingDir        string // If empty, uses current directory
+	IncludeCurrentRepo bool   // Include current working directory repo (opt-in)
+	IncludeFilesystem  bool
+	IncludeNixConfig   bool
+	IncludeDotfiles    bool
+	CaptureScreenshot  bool
+	WorkingDir         string // If empty, uses current directory
 }

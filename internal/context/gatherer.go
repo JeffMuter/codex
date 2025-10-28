@@ -3,19 +3,25 @@ package context
 import (
 	"fmt"
 	"time"
+
+	"codex/internal/config"
 )
 
 // Gatherer collects context information from various sources
 type Gatherer struct {
-	nixConfigPath string
-	dotfilesPath  string
+	nixConfigPath   string
+	dotfilesPath    string
+	configuredRepos []config.ConfiguredRepo
+	repoFetcher     *RepoFetcher
 }
 
 // NewGatherer creates a new context gatherer
-func NewGatherer(nixConfigPath, dotfilesPath string) *Gatherer {
+func NewGatherer(cfg *config.Config) *Gatherer {
 	return &Gatherer{
-		nixConfigPath: nixConfigPath,
-		dotfilesPath:  dotfilesPath,
+		nixConfigPath:   cfg.NixConfigPath,
+		dotfilesPath:    cfg.DotfilesPath,
+		configuredRepos: cfg.ConfiguredRepos,
+		repoFetcher:     NewRepoFetcher(),
 	}
 }
 
@@ -25,14 +31,24 @@ func (g *Gatherer) Gather(opts GatherOptions) (*Context, error) {
 		Timestamp: time.Now(),
 	}
 
-	// Gather repository context
-	if opts.IncludeRepository {
-		repoCtx, err := g.gatherRepository(opts.WorkingDir)
+	// Always gather configured repositories
+	configuredRepos, err := g.gatherConfiguredRepos()
+	if err != nil {
+		// Log warning but continue
+		// TODO: Add proper logging
+	} else {
+		ctx.ConfiguredRepos = configuredRepos
+	}
+
+	// Optionally gather current repository (opt-in via flag)
+	if opts.IncludeCurrentRepo {
+		currentRepo, err := g.gatherCurrentRepo(opts.WorkingDir)
 		if err != nil {
 			// Don't fail if we're not in a git repository
 			// Just log and continue
+			// TODO: Add proper logging
 		} else {
-			ctx.Repository = repoCtx
+			ctx.CurrentRepo = currentRepo
 		}
 	}
 
@@ -79,15 +95,46 @@ func (g *Gatherer) Gather(opts GatherOptions) (*Context, error) {
 	return ctx, nil
 }
 
-// gatherRepository collects git repository information
-func (g *Gatherer) gatherRepository(workingDir string) (*RepositoryContext, error) {
-	// TODO: Implement git repository detection and parsing
-	// - Find .git directory by traversing up
-	// - Parse git config for remote
-	// - Get current branch
-	// - Get recent commits
-	// - Get git status
-	return nil, fmt.Errorf("not yet implemented")
+// gatherConfiguredRepos fetches all configured repositories
+func (g *Gatherer) gatherConfiguredRepos() ([]*RepositoryContext, error) {
+	var repos []*RepositoryContext
+
+	for _, configuredRepo := range g.configuredRepos {
+		repoPath, err := g.repoFetcher.FetchRepo(configuredRepo)
+		if err != nil {
+			// Log error but continue with other repos
+			// TODO: Add proper logging
+			continue
+		}
+
+		// Get git remote if available
+		remote, _ := getGitRemote(repoPath)
+
+		repos = append(repos, &RepositoryContext{
+			Path:   repoPath,
+			Remote: remote,
+			Source: configuredRepo.Source,
+			Type:   configuredRepo.Type,
+		})
+	}
+
+	return repos, nil
+}
+
+// gatherCurrentRepo collects current working directory repository information
+func (g *Gatherer) gatherCurrentRepo(workingDir string) (*RepositoryContext, error) {
+	repoPath, err := findGitRepository(workingDir)
+	if err != nil {
+		return nil, err
+	}
+
+	remote, _ := getGitRemote(repoPath)
+
+	return &RepositoryContext{
+		Path:   repoPath,
+		Remote: remote,
+		Type:   "current",
+	}, nil
 }
 
 // gatherFilesystem collects current directory information

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"codex/internal/config"
 	"codex/internal/logging"
 
 	"github.com/spf13/cobra"
@@ -103,6 +104,146 @@ func init() {
 	rootCmd.AddCommand(configCmd)
 	configCmd.AddCommand(configShowCmd)
 	configCmd.AddCommand(configSetCmd)
+	configCmd.AddCommand(configAddRepoCmd)
+	configCmd.AddCommand(configListReposCmd)
+	configCmd.AddCommand(configRemoveRepoCmd)
+}
+
+// configAddRepoCmd adds a repository to the configured repos list
+var configAddRepoCmd = &cobra.Command{
+	Use:   "add-repo [path-or-url]",
+	Short: "Add a repository to always include as context",
+	Long: `Add a repository to be included as context in all queries.
+Can be a local path or a remote git URL.
+
+Examples:
+  codex config add-repo /path/to/local/repo
+  codex config add-repo https://github.com/user/repo
+  codex config add-repo git@github.com:user/repo.git`,
+	Args: cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		source := args[0]
+
+		logging.Logger.Debug().
+			Str("source", source).
+			Msg("Adding repository to configuration")
+
+		// Load config
+		cfg, err := config.Load()
+		if err != nil {
+			logging.Logger.Error().Err(err).Msg("Failed to load configuration")
+			fmt.Fprintf(os.Stderr, "Error: failed to load configuration: %v\n", err)
+			os.Exit(1)
+		}
+
+		// Add repo
+		if err := cfg.AddRepo(source); err != nil {
+			logging.Logger.Error().Err(err).Msg("Failed to add repository")
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+
+		// Ensure directories exist
+		if err := config.EnsureDirectories(); err != nil {
+			logging.Logger.Error().Err(err).Msg("Failed to create directories")
+			fmt.Fprintf(os.Stderr, "Error: failed to create directories: %v\n", err)
+			os.Exit(1)
+		}
+
+		// Save config
+		if err := cfg.Save(); err != nil {
+			logging.Logger.Error().Err(err).Msg("Failed to save configuration")
+			fmt.Fprintf(os.Stderr, "Error: failed to save configuration: %v\n", err)
+			os.Exit(1)
+		}
+
+		logging.Logger.Info().
+			Str("source", source).
+			Msg("Repository added successfully")
+		fmt.Printf("✓ Repository added: %s\n", source)
+	},
+}
+
+// configListReposCmd lists all configured repositories
+var configListReposCmd = &cobra.Command{
+	Use:   "list-repos",
+	Short: "List all configured repositories",
+	Long:  `Display all repositories that are configured to be included as context.`,
+	Run: func(cmd *cobra.Command, args []string) {
+		logging.Logger.Debug().Msg("Listing configured repositories")
+
+		// Load config
+		cfg, err := config.Load()
+		if err != nil {
+			logging.Logger.Error().Err(err).Msg("Failed to load configuration")
+			fmt.Fprintf(os.Stderr, "Error: failed to load configuration: %v\n", err)
+			os.Exit(1)
+		}
+
+		fmt.Println("Configured Repositories")
+		fmt.Println("=======================")
+		fmt.Println()
+
+		if len(cfg.ConfiguredRepos) == 0 {
+			fmt.Println("No repositories configured.")
+			fmt.Println()
+			fmt.Println("Add a repository with: codex config add-repo [path-or-url]")
+			return
+		}
+
+		for i, repo := range cfg.ConfiguredRepos {
+			fmt.Printf("%d. %s (%s)\n", i+1, repo.Source, repo.Type)
+			if repo.Type == "remote" && repo.CachePath != "" {
+				fmt.Printf("   Cached at: %s\n", repo.CachePath)
+			}
+		}
+	},
+}
+
+// configRemoveRepoCmd removes a repository from the configured repos list
+var configRemoveRepoCmd = &cobra.Command{
+	Use:   "remove-repo [path-or-url]",
+	Short: "Remove a repository from configured repos",
+	Long: `Remove a repository from being included as context.
+
+Examples:
+  codex config remove-repo /path/to/local/repo
+  codex config remove-repo https://github.com/user/repo`,
+	Args: cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		source := args[0]
+
+		logging.Logger.Debug().
+			Str("source", source).
+			Msg("Removing repository from configuration")
+
+		// Load config
+		cfg, err := config.Load()
+		if err != nil {
+			logging.Logger.Error().Err(err).Msg("Failed to load configuration")
+			fmt.Fprintf(os.Stderr, "Error: failed to load configuration: %v\n", err)
+			os.Exit(1)
+		}
+
+		// Remove repo
+		if err := cfg.RemoveRepo(source); err != nil {
+			logging.Logger.Error().Err(err).Msg("Failed to remove repository")
+			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+			os.Exit(1)
+		}
+
+		// Save config
+		if err := cfg.Save(); err != nil {
+			logging.Logger.Error().Err(err).Msg("Failed to save configuration")
+			fmt.Fprintf(os.Stderr, "Error: failed to save configuration: %v\n", err)
+			os.Exit(1)
+		}
+
+		logging.Logger.Info().
+			Str("source", source).
+			Msg("Repository removed successfully")
+		fmt.Printf("✓ Repository removed: %s\n", source)
+	},
 }
 
 // Helper function to return value or default

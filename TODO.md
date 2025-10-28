@@ -1,190 +1,93 @@
-# Codex Development TODO
+# Codex Development TODO - MVP Focus
 
 ## Current Status (as of 2025-10-28)
 **What's Working:**
 - ✓ Cobra CLI framework integrated
-- ✓ `codex ask [question]` command with `--screenshot` and `--verbose` flags
+- ✓ `codex ask [question]` command with argument parsing
 - ✓ `codex config show` displays environment variables
-- ✓ `codex config set [key] [value]` provides setup instructions
-- ✓ All help text and command structure in place
 - ✓ Binary builds successfully
 - ✓ Internal package structure created (internal/config, internal/context, internal/providers, internal/errors)
-- ✓ Logging framework integrated (zerolog) with verbose mode support
-- ✓ shell.nix updated with all Go development tools (gopls, gotools, delve, sqlite)
+- ✓ Logging framework integrated (zerolog)
 
-**What's Next:**
-- Update cmd/ files to use new internal packages (config, context, errors)
-- Configuration file support implementation (~/.config/codex/config.yaml)
-- Git repository detection and context gathering
-- Database setup with goose migrations
+**MVP Goal:**
+```bash
+codex ask "what's my tmux prefix?"
+# → Reads config for repo paths
+# → Parses those repos for tmux config
+# → Sends to Claude API with simple prompt
+# → Returns answer
+```
 
 ---
 
-## Phase 1: Core CLI Structure ✓ (Partially Complete)
-- [x] Set up CLI framework (cobra)
-  - [x] Implement `codex ask` command with argument parsing
-  - [x] Implement `codex config` command group (show/set subcommands)
-  - [x] Add `--screenshot` flag support (parsing ready, capture logic pending)
-  - [x] Add `--verbose` flag for debugging
-- [ ] Configuration management
-  - [x] Read from environment variables (CODEX_NIX_CONFIG, CODEX_DOTFILES)
-  - [ ] Support config file (~/.config/codex/config.yaml or similar)
-  - [ ] Implement config validation
-  - [x] Add `codex config show` to display current configuration
-  - [ ] Implement `codex config set` persistence (currently shows env var instructions)
-- [x] Basic project structure
-  - [x] Create cmd/ package with root, ask, config commands
-  - [x] Create internal/ package structure (config/, context/, providers/, errors/)
-  - [ ] Create pkg/ if needed for reusable libraries
-  - [x] Set up error handling patterns (internal/errors package)
-  - [x] Add logging framework (zerolog integrated with verbose mode support)
-  - [x] Update shell.nix with Go development tools (gopls, gotools, delve, sqlite)
+## MVP Tasks (Essential Only)
 
-## Phase 2: Context Discovery & Analysis
-- [ ] Repository detection
-  - [ ] Implement git repository finder (traverse up from cwd)
-  - [ ] Parse basic repo metadata (remote, branch, recent commits)
-  - [ ] Handle non-git directories gracefully
-- [ ] Nix configuration parser
-  - [ ] Locate Nix config repository
-  - [ ] Parse .nix files for installed packages
-  - [ ] Extract system configuration
-  - [ ] Handle flakes vs traditional Nix configs
-  - [ ] Convert parsed data to JSON format for storage
-- [ ] Dotfiles/Home-manager parser
-  - [ ] Locate dotfiles repository
-  - [ ] Parse common config files (tmux, neovim, shell, etc.)
-  - [ ] Extract keybindings from various tools
-  - [ ] Handle both plain dotfiles and home-manager setups
-  - [ ] Convert parsed data to JSON format for storage
-- [ ] Filesystem context
-  - [ ] Capture current working directory
-  - [ ] Build parent directory hierarchy
-  - [ ] Include relevant files from current directory
-  - [ ] Serialize as JSON
+### 1. Configuration Management
+- [ ] Load config from ~/.config/codex/config.yaml
+- [ ] Simple config structure: repo paths, API key
+- [ ] Basic validation (paths exist, API key present)
 
-## Phase 3: Database & Caching (SQLite)
-- [ ] Database setup
-  - [ ] Set up goose migrations structure for SQLite
-  - [ ] Create initial schema for context cache
-  - [ ] Add tables for parsed configs with timestamps (store as JSON)
-  - [ ] Add indexes for efficient lookups
-  - [ ] Set SQLite pragmas for performance (WAL mode, etc.)
-  - [ ] Handle database location (~/.local/share/codex/codex.db or similar)
-- [ ] Context caching
-  - [ ] Implement cache key generation (config repo + hash)
-  - [ ] Cache parsed Nix configuration as JSON
-  - [ ] Cache parsed dotfiles/home-manager as JSON
-  - [ ] Add TTL or invalidation strategy (check file mtimes)
-  - [ ] Implement cache refresh logic
-  - [ ] Add `codex cache clear` command
+### 2. Context Gathering (In-Memory, No Caching)
+- [ ] Read configured repository paths from config
+- [ ] Simple file reading from those repos
+- [ ] Basic dotfiles parsing (grep for patterns in common config files)
+- [ ] Build context string from gathered data
 
-## Phase 4: Screenshot Support
-- [ ] Screenshot tool detection
-  - [ ] Detect available screenshot tools (scrot, maim, grim, etc.)
-  - [ ] Handle different display servers (X11, Wayland)
-  - [ ] Add fallback options if no tool found
-- [ ] Screenshot capture
-  - [ ] Implement screenshot capture via shell command
-  - [ ] Save to temporary location
-  - [ ] Clean up temp files after use
-  - [ ] Handle screenshot errors gracefully
+### 3. Single AI Provider (Anthropic Only)
+- [ ] Basic Anthropic API client
+- [ ] Read API key from config/environment
+- [ ] Send prompt with context
+- [ ] Stream response to terminal
+- [ ] Basic error handling (fail fast)
 
-## Phase 5: AI Provider Integration
-- [x] Provider interface
-  - [x] Define common interface for AI providers (internal/providers/provider.go)
-  - [x] Implement provider factory/registry
-  - [ ] Add configuration for provider selection
-- [ ] Anthropic Claude integration
-  - [x] Provider skeleton created (internal/providers/anthropic.go)
-  - [ ] API client implementation
-  - [ ] Handle API key from environment/config
-  - [ ] Implement rate limiting
-  - [ ] Handle errors and retries
-- [ ] OpenAI integration
-  - [x] Provider skeleton created (internal/providers/openai.go)
-  - [ ] API client implementation
-  - [ ] Support multiple models
-  - [ ] Handle API key from environment/config
-- [ ] Local LLM support
-  - [x] Provider skeleton created (internal/providers/ollama.go)
-  - [ ] Ollama integration
-  - [ ] Support for other local providers
-  - [ ] Handle local model availability checks
-- [ ] Provider configuration
-  - [ ] Add `codex config set-provider` command
-  - [ ] Store provider preference
-  - [ ] Allow per-query provider override
+### 4. Query Processing (Minimal)
+- [ ] Accept user query from CLI
+- [ ] Build simple prompt: "Context: {context}\n\nQuestion: {query}"
+- [ ] Send to Anthropic
+- [ ] Display response
 
-## Phase 6: Query Processing
-- [ ] Context builder
-  - [ ] Combine all context sources into structured JSON format
-  - [ ] Calculate total context size (tokens/characters)
-  - [ ] Optimize context size (summarize, prioritize relevant parts)
-  - [ ] Handle screenshots (base64 encode, attach to request)
-  - [ ] Create system prompt with context
-- [ ] Context size validation
-  - [ ] Define context size thresholds (warn at X tokens, error at Y)
-  - [ ] Implement token estimation for different providers
-  - [ ] Show warning with size estimate and cost estimate if large
-  - [ ] Prompt user for confirmation before sending large context
-  - [ ] Add `--force` flag to skip confirmation
-  - [ ] Add `--no-context` flag to send query without context
-- [ ] Query handler
-  - [ ] Accept user query
-  - [ ] Build complete prompt with context
-  - [ ] Validate context size and get user confirmation if needed
-  - [ ] Send to selected AI provider
-  - [ ] Stream response to terminal
-  - [ ] Handle errors and provide fallback
+### 5. Basic Testing
+- [ ] Unit tests for config loading
+- [ ] Unit tests for context gathering
+- [ ] Manual integration testing
 
-## Phase 7: Testing & Polish
-- [ ] Unit tests
-  - [ ] Test config parsing
-  - [ ] Test repository detection
-  - [ ] Test context building
-  - [ ] Test provider interface
-- [ ] Integration tests
-  - [ ] Test full query flow
-  - [ ] Test with sample config repositories
-  - [ ] Test error scenarios
-- [ ] Documentation
-  - [ ] Add code comments
-  - [ ] Update README with actual usage
-  - [ ] Add example configurations
-  - [ ] Document troubleshooting common issues
-- [ ] Polish
-  - [ ] Add progress indicators for slow operations
-  - [ ] Improve error messages
-  - [ ] Add shell completions
-  - [ ] Optimize performance
+---
 
-## Phase 8: Advanced Features (Future)
-- [ ] Interactive mode
-  - [ ] Multi-turn conversations
-  - [ ] Context persistence across queries
-- [ ] Query history
-  - [ ] Store past queries (optional, privacy-conscious)
-  - [ ] Search through history
-  - [ ] Rerun past queries
-- [ ] Smart context selection
-  - [ ] Analyze query to determine relevant context
-  - [ ] Only include necessary config files
-  - [ ] Reduce token usage
-- [ ] Plugin system
-  - [ ] Support custom context providers
-  - [ ] Allow custom parsers for config formats
+## Future Features (Post-MVP)
 
-## Questions & Decisions Made
-- **AI Backend**: Multiple providers (Anthropic, OpenAI, Local LLM)
-- **Priority**: Core CLI first, then context gathering
-- **Database**: SQLite for context caching (embedded, no server required)
-- **Config Format**: JSON for storing parsed configurations
-- **Context Size**: Warn user and require confirmation before sending large context
-- **Screenshots**: Shell out to existing tools (scrot, maim, grim)
-- **Logging Framework**: zerolog (zero-allocation, fastest, perfect for CLIs)
+- **Caching**: SQLite database for parsed config caching with TTL/invalidation
+- **Screenshot Support**: Integrate screenshot tools for visual context
+- **Multiple Providers**: OpenAI, local LLM (Ollama), provider switching
+- **Smart Context**: Token counting, size warnings, user confirmation for large contexts
+- **Advanced Parsing**: Deep Nix flake parsing, home-manager config analysis
+- **Polish**: Progress indicators, shell completions, better error messages
+- **Interactive Mode**: Multi-turn conversations with context persistence
+- **Query History**: Store and search past queries
+- **Plugin System**: Custom context providers and config parsers
+
+---
+
+## Questions & Decisions
+- **AI Backend**: Anthropic Claude for MVP, expand later
+- **Priority**: Prove core value first, optimize later
+- **No Database**: Parse on-demand for MVP
+- **No Screenshots**: Defer until after basic queries work
+- **Logging**: zerolog (already integrated)
+- **Repository Model**: Configured repos from config file
 
 ## Recent Commits & Progress
+- **[uncommitted]** (2025-10-28): Implemented repository management system
+  - Created ConfiguredRepo type to distinguish local/remote repositories
+  - Implemented RepoFetcher for fetching local and remote repositories
+  - Remote repos are cloned to ~/.local/share/codex/repos/ and cached
+  - Modified Context types: ConfiguredRepos (always included) + CurrentRepo (opt-in)
+  - Updated GatherOptions: IncludeCurrentRepo flag instead of automatic detection
+  - Modified Gatherer to always fetch configured repos, optionally include current repo
+  - Added --current-repo (-r) flag to ask command for opt-in behavior
+  - Added config commands: add-repo, list-repos, remove-repo
+  - Updated README with new repository model and privacy-conscious approach
+  - Config struct now includes ConfiguredRepos []ConfiguredRepo
+  - AddRepo/RemoveRepo methods for managing repository configuration
 - **[uncommitted]** (2025-10-28): Integrated zerolog logging framework
   - Created internal/logging/logger.go with structured logging support
   - Added zerolog dependency (v1.34.0) to go.mod
