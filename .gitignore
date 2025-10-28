@@ -1,0 +1,12 @@
+# Environment variables
+.env
+
+# Binary
+codex
+
+# Go
+*.test
+*.out
+
+# Database
+*.db

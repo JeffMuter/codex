@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/joho/godotenv"
 	"gopkg.in/yaml.v3"
 )
 
@@ -26,6 +27,7 @@ type Config struct {
 
 	// AI Provider settings
 	Provider     string `yaml:"provider"` // "anthropic", "openai", "ollama"
+	Model        string `yaml:"model,omitempty"` // Model name (optional, uses provider default if not set)
 	AnthropicKey string `yaml:"anthropic_key,omitempty"`
 	OpenAIKey    string `yaml:"openai_key,omitempty"`
 	OllamaURL    string `yaml:"ollama_url,omitempty"`
@@ -35,32 +37,48 @@ type Config struct {
 
 	// Cache settings
 	CacheTTL int `yaml:"cache_ttl"` // in hours
+
+	// Context settings
+	MaxContextSize int `yaml:"max_context_size"` // Maximum context size in bytes (0 = no limit)
 }
 
 // Default configuration values
 const (
-	DefaultProvider    = "anthropic"
-	DefaultCacheTTL    = 24 // 24 hours
-	DefaultOllamaURL   = "http://localhost:11434"
-	DefaultConfigDir   = ".config/codex"
-	DefaultDataDir     = ".local/share/codex"
-	DefaultConfigFile  = "config.yaml"
-	DefaultDatabaseFile = "codex.db"
+	DefaultProvider      = "anthropic"
+	DefaultCacheTTL      = 24 // 24 hours
+	DefaultOllamaURL     = "http://localhost:11434"
+	DefaultConfigDir     = ".config/codex"
+	DefaultDataDir       = ".local/share/codex"
+	DefaultConfigFile    = "config.yaml"
+	DefaultDatabaseFile  = "codex.db"
+	DefaultMaxContextSize = 500 * 1024 // 500KB (~125K tokens) - conservative default
 )
 
 // Load reads configuration from file and environment variables
 // Environment variables take precedence over config file values
 func Load() (*Config, error) {
+	// Load .env file if it exists (silently ignore if it doesn't)
+	// Look for .env in current directory and home directory
+	_ = godotenv.Load() // Current directory
+	homeDir, _ := os.UserHomeDir()
+	if homeDir != "" {
+		_ = godotenv.Load(filepath.Join(homeDir, ".env")) // Home directory
+	}
+
 	cfg := &Config{
-		Provider:  DefaultProvider,
-		CacheTTL:  DefaultCacheTTL,
-		OllamaURL: DefaultOllamaURL,
+		Provider:       DefaultProvider,
+		CacheTTL:       DefaultCacheTTL,
+		OllamaURL:      DefaultOllamaURL,
+		MaxContextSize: DefaultMaxContextSize,
 	}
 
 	// Set default paths
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get home directory: %w", err)
+	if homeDir == "" {
+		var err error
+		homeDir, err = os.UserHomeDir()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get home directory: %w", err)
+		}
 	}
 
 	cfg.DatabasePath = filepath.Join(homeDir, DefaultDataDir, DefaultDatabaseFile)
@@ -73,7 +91,7 @@ func Load() (*Config, error) {
 		}
 	}
 
-	// Override with environment variables
+	// Override with environment variables (from .env or system)
 	loadFromEnv(cfg)
 
 	return cfg, nil

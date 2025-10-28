@@ -27,25 +27,42 @@ var configShowCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		logging.Logger.Debug().Msg("Displaying configuration")
 
+		// Load config
+		cfg, err := config.Load()
+		if err != nil {
+			logging.Logger.Error().Err(err).Msg("Failed to load configuration")
+			fmt.Fprintf(os.Stderr, "Error: failed to load configuration: %v\n", err)
+			os.Exit(1)
+		}
+
 		fmt.Println("Codex Configuration")
 		fmt.Println("===================")
 		fmt.Println()
 
-		// Check environment variables
-		nixConfig := os.Getenv("CODEX_NIX_CONFIG")
-		dotfiles := os.Getenv("CODEX_DOTFILES")
-
 		logging.Logger.Debug().
-			Str("nix_config", nixConfig).
-			Str("dotfiles", dotfiles).
+			Str("nix_config", cfg.NixConfigPath).
+			Str("dotfiles", cfg.DotfilesPath).
+			Str("provider", cfg.Provider).
 			Msg("Current configuration values")
 
-		fmt.Printf("Nix Config Path:  %s\n", getConfigValue(nixConfig, "not set"))
-		fmt.Printf("Dotfiles Path:    %s\n", getConfigValue(dotfiles, "not set"))
+		fmt.Printf("Nix Config Path:  %s\n", getConfigValue(cfg.NixConfigPath, "not set"))
+		fmt.Printf("Dotfiles Path:    %s\n", getConfigValue(cfg.DotfilesPath, "not set"))
+		fmt.Println()
+		fmt.Printf("AI Provider:      %s\n", cfg.Provider)
+		fmt.Printf("Database Path:    %s\n", cfg.DatabasePath)
+		fmt.Printf("Cache TTL:        %d hours\n", cfg.CacheTTL)
 		fmt.Println()
 
-		// TODO: Also read from config file when implemented
-		fmt.Println("Note: Configuration file support coming soon (~/.config/codex/config.yaml)")
+		fmt.Println("Configured Repositories:")
+		if len(cfg.ConfiguredRepos) == 0 {
+			fmt.Println("  (none)")
+		} else {
+			for i, repo := range cfg.ConfiguredRepos {
+				fmt.Printf("  %d. %s (%s)\n", i+1, repo.Source, repo.Type)
+			}
+		}
+		fmt.Println()
+		fmt.Printf("Config file: %s\n", config.GetConfigPath())
 	},
 }
 

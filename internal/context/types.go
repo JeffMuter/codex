@@ -15,10 +15,11 @@ type Context struct {
 
 // RepositoryContext contains git repository information
 type RepositoryContext struct {
-	Path   string `json:"path"`
-	Remote string `json:"remote,omitempty"`
-	Source string `json:"source,omitempty"` // Original source (URL or path)
-	Type   string `json:"type,omitempty"`   // "local" or "remote" or "current"
+	Path     string        `json:"path"`
+	Remote   string        `json:"remote,omitempty"`
+	Source   string        `json:"source,omitempty"` // Original source (URL or path)
+	Type     string        `json:"type,omitempty"`   // "local" or "remote" or "current"
+	Contents *RepoContents `json:"contents,omitempty"` // Actual file contents
 }
 
 // FilesystemContext contains current directory and file information

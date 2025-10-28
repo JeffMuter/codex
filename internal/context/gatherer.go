@@ -13,15 +13,24 @@ type Gatherer struct {
 	dotfilesPath    string
 	configuredRepos []config.ConfiguredRepo
 	repoFetcher     *RepoFetcher
+	contentReader   *ContentReader
+	summarizer      *ContextSummarizer
 }
 
 // NewGatherer creates a new context gatherer
 func NewGatherer(cfg *config.Config) *Gatherer {
+	var summarizer *ContextSummarizer
+	if cfg.MaxContextSize > 0 {
+		summarizer = NewContextSummarizer(cfg.MaxContextSize)
+	}
+
 	return &Gatherer{
 		nixConfigPath:   cfg.NixConfigPath,
 		dotfilesPath:    cfg.DotfilesPath,
 		configuredRepos: cfg.ConfiguredRepos,
 		repoFetcher:     NewRepoFetcher(),
+		contentReader:   NewContentReader(),
+		summarizer:      summarizer,
 	}
 }
 
@@ -92,6 +101,11 @@ func (g *Gatherer) Gather(opts GatherOptions) (*Context, error) {
 		ctx.Screenshot = screenshot
 	}
 
+	// Apply summarization if configured
+	if g.summarizer != nil {
+		ctx = g.summarizer.SummarizeContext(ctx)
+	}
+
 	return ctx, nil
 }
 
@@ -110,11 +124,20 @@ func (g *Gatherer) gatherConfiguredRepos() ([]*RepositoryContext, error) {
 		// Get git remote if available
 		remote, _ := getGitRemote(repoPath)
 
+		// Read repository contents
+		contents, err := g.contentReader.ReadRepoContents(repoPath)
+		if err != nil {
+			// Log error but continue without contents
+			// TODO: Add proper logging
+			contents = nil
+		}
+
 		repos = append(repos, &RepositoryContext{
-			Path:   repoPath,
-			Remote: remote,
-			Source: configuredRepo.Source,
-			Type:   configuredRepo.Type,
+			Path:     repoPath,
+			Remote:   remote,
+			Source:   configuredRepo.Source,
+			Type:     configuredRepo.Type,
+			Contents: contents,
 		})
 	}
 
@@ -139,11 +162,13 @@ func (g *Gatherer) gatherCurrentRepo(workingDir string) (*RepositoryContext, err
 
 // gatherFilesystem collects current directory information
 func (g *Gatherer) gatherFilesystem(workingDir string) (*FilesystemContext, error) {
-	// TODO: Implement filesystem context gathering
-	// - Get current directory
-	// - Build parent directory hierarchy
-	// - List files in current directory
-	return nil, fmt.Errorf("not yet implemented")
+	if workingDir == "" {
+		return &FilesystemContext{}, nil
+	}
+
+	return &FilesystemContext{
+		CurrentDir: workingDir,
+	}, nil
 }
 
 // gatherNixConfig parses Nix configuration

@@ -1,10 +1,15 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
+	"os"
 	"strings"
 
+	"codex/internal/config"
+	codexContext "codex/internal/context"
 	"codex/internal/logging"
+	"codex/internal/providers"
 
 	"github.com/spf13/cobra"
 )
@@ -33,7 +38,7 @@ Examples:
   codex ask --current-repo "Explain this codebase structure"
   codex ask "What CLI tools do I have for JSON processing?"`,
 	Args: cobra.MinimumNArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		question := strings.Join(args, " ")
 
 		logging.Logger.Debug().
@@ -42,26 +47,81 @@ Examples:
 			Bool("current_repo", currentRepo).
 			Msg("Processing ask command")
 
-		// TODO: Implement the actual ask logic
-		// This will involve:
-		// 1. Gathering context from all sources (configured repos + optional current repo)
-		// 2. Building the complete prompt
-		// 3. Sending to AI provider
-		// 4. Streaming the response
-
-		fmt.Printf("Processing question: %s\n", question)
-		if screenshot {
-			logging.Logger.Debug().Msg("Screenshot context will be captured")
-			fmt.Println("Screenshot context will be captured")
-		}
-		if currentRepo {
-			logging.Logger.Debug().Msg("Current repository will be included as context")
-			fmt.Println("Current repository will be included as context")
+		// Load configuration
+		cfg, err := config.Load()
+		if err != nil {
+			return fmt.Errorf("failed to load config: %w", err)
 		}
 
-		// Placeholder response
-		logging.Logger.Warn().Msg("Ask command not yet fully implemented")
-		fmt.Println("\n[Not yet implemented - context gathering and AI provider integration coming soon]")
+		// Validate configuration
+		if err := cfg.Validate(); err != nil {
+			return fmt.Errorf("invalid configuration: %w", err)
+		}
+
+		logging.Logger.Debug().
+			Str("provider", cfg.Provider).
+			Int("configured_repos", len(cfg.ConfiguredRepos)).
+			Msg("Configuration loaded")
+
+		// Create AI provider
+		var provider providers.Provider
+		switch cfg.Provider {
+		case "anthropic":
+			if cfg.Model != "" {
+				provider = providers.NewAnthropicProviderWithModel(cfg.AnthropicKey, cfg.Model)
+			} else {
+				provider = providers.NewAnthropicProvider(cfg.AnthropicKey)
+			}
+		default:
+			return fmt.Errorf("unsupported provider: %s", cfg.Provider)
+		}
+
+		// Validate provider
+		if err := provider.Validate(); err != nil {
+			return fmt.Errorf("provider validation failed: %w", err)
+		}
+
+		logging.Logger.Debug().Str("provider", provider.Name()).Msg("Provider initialized")
+
+		// Gather context
+		gatherer := codexContext.NewGatherer(cfg)
+
+		workingDir, err := os.Getwd()
+		if err != nil {
+			return fmt.Errorf("failed to get working directory: %w", err)
+		}
+
+		gatherOpts := codexContext.GatherOptions{
+			IncludeCurrentRepo: currentRepo,
+			IncludeFilesystem:  true,
+			IncludeNixConfig:   cfg.NixConfigPath != "",
+			IncludeDotfiles:    cfg.DotfilesPath != "",
+			CaptureScreenshot:  screenshot,
+			WorkingDir:         workingDir,
+		}
+
+		logging.Logger.Debug().Msg("Gathering context...")
+		ctx, err := gatherer.Gather(gatherOpts)
+		if err != nil {
+			return fmt.Errorf("failed to gather context: %w", err)
+		}
+
+		logging.Logger.Debug().
+			Int("configured_repos", len(ctx.ConfiguredRepos)).
+			Bool("has_current_repo", ctx.CurrentRepo != nil).
+			Msg("Context gathered")
+
+		// Send query to provider
+		logging.Logger.Debug().Msg("Sending query to provider...")
+
+		apiCtx := context.Background()
+		if err := provider.SendQuery(apiCtx, question, ctx, os.Stdout); err != nil {
+			return fmt.Errorf("failed to get response: %w", err)
+		}
+
+		logging.Logger.Debug().Msg("Query completed successfully")
+
+		return nil
 	},
 }
 
