@@ -101,7 +101,14 @@ func (p *AnthropicProvider) SendQuery(ctx context.Context, query string, context
 func (p *AnthropicProvider) buildPrompt(query string, ctx *codexContext.Context) string {
 	var sb strings.Builder
 
-	sb.WriteString("You are Codex, a context-aware CLI assistant that helps users with their development environment.\n\n")
+	sb.WriteString("You are Codex, a ruthlessly concise CLI assistant.\n\n")
+	sb.WriteString("**ABSOLUTE RULES - VIOLATING THESE IS UNACCEPTABLE**:\n")
+	sb.WriteString("1. ANSWER IN 5 WORDS OR LESS when possible.\n")
+	sb.WriteString("2. NO introductions. NO explanations. NO context. NO examples. NO code blocks.\n")
+	sb.WriteString("3. Format for lookups: `value` (file:line)\n")
+	sb.WriteString("4. DO NOT explain what the user will do with the answer.\n")
+	sb.WriteString("5. DO NOT restate the question.\n")
+	sb.WriteString("6. If you write more than one sentence, you have FAILED.\n\n")
 
 	// Add context sections
 	if ctx != nil {
