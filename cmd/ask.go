@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strings"
 
+	"codex/internal/logging"
+
 	"github.com/spf13/cobra"
 )
 
@@ -31,11 +33,10 @@ Examples:
 	Run: func(cmd *cobra.Command, args []string) {
 		question := strings.Join(args, " ")
 
-		if verbose {
-			fmt.Println("Verbose mode enabled")
-			fmt.Printf("Question: %s\n", question)
-			fmt.Printf("Screenshot requested: %v\n", screenshot)
-		}
+		logging.Logger.Debug().
+			Str("question", question).
+			Bool("screenshot", screenshot).
+			Msg("Processing ask command")
 
 		// TODO: Implement the actual ask logic
 		// This will involve:
@@ -46,10 +47,12 @@ Examples:
 
 		fmt.Printf("Processing question: %s\n", question)
 		if screenshot {
+			logging.Logger.Debug().Msg("Screenshot context will be captured")
 			fmt.Println("Screenshot context will be captured")
 		}
 
 		// Placeholder response
+		logging.Logger.Warn().Msg("Ask command not yet fully implemented")
 		fmt.Println("\n[Not yet implemented - context gathering and AI provider integration coming soon]")
 	},
 }

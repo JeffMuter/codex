@@ -3,6 +3,8 @@ package cmd
 import (
 	"os"
 
+	"codex/internal/logging"
+
 	"github.com/spf13/cobra"
 )
 
@@ -18,6 +20,17 @@ var rootCmd = &cobra.Command{
 It analyzes your Nix configuration, dotfiles, and current workspace to provide
 personalized recommendations, keybind information, and tooling suggestions
 tailored to your specific environment.`,
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		// Initialize logger based on verbose flag
+		logging.InitWithVerbose(verbose)
+
+		if verbose {
+			logging.Logger.Debug().
+				Str("command", cmd.Name()).
+				Strs("args", args).
+				Msg("Command execution started")
+		}
+	},
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
@@ -25,6 +38,7 @@ tailored to your specific environment.`,
 func Execute() {
 	err := rootCmd.Execute()
 	if err != nil {
+		logging.Logger.Error().Err(err).Msg("Command execution failed")
 		os.Exit(1)
 	}
 }

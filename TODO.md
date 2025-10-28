@@ -9,10 +9,11 @@
 - ✓ All help text and command structure in place
 - ✓ Binary builds successfully
 - ✓ Internal package structure created (internal/config, internal/context, internal/providers, internal/errors)
+- ✓ Logging framework integrated (zerolog) with verbose mode support
+- ✓ shell.nix updated with all Go development tools (gopls, gotools, delve, sqlite)
 
 **What's Next:**
-- Choose and integrate logging framework (zerolog or zap)
-- Update cmd/ files to use new internal packages
+- Update cmd/ files to use new internal packages (config, context, errors)
 - Configuration file support implementation (~/.config/codex/config.yaml)
 - Git repository detection and context gathering
 - Database setup with goose migrations
@@ -36,7 +37,8 @@
   - [x] Create internal/ package structure (config/, context/, providers/, errors/)
   - [ ] Create pkg/ if needed for reusable libraries
   - [x] Set up error handling patterns (internal/errors package)
-  - [ ] Add logging framework (structured logging, e.g., zerolog or zap) - PENDING USER CHOICE
+  - [x] Add logging framework (zerolog integrated with verbose mode support)
+  - [x] Update shell.nix with Go development tools (gopls, gotools, delve, sqlite)
 
 ## Phase 2: Context Discovery & Analysis
 - [ ] Repository detection
@@ -180,8 +182,18 @@
 - **Config Format**: JSON for storing parsed configurations
 - **Context Size**: Warn user and require confirmation before sending large context
 - **Screenshots**: Shell out to existing tools (scrot, maim, grim)
+- **Logging Framework**: zerolog (zero-allocation, fastest, perfect for CLIs)
 
 ## Recent Commits & Progress
+- **[uncommitted]** (2025-10-28): Integrated zerolog logging framework
+  - Created internal/logging/logger.go with structured logging support
+  - Added zerolog dependency (v1.34.0) to go.mod
+  - Updated cmd/root.go with logger initialization in PersistentPreRun
+  - Updated cmd/ask.go and cmd/config.go with structured logging
+  - Enhanced shell.nix with Go dev tools (gopls, gotools, delve, sqlite)
+  - Added shellHook with helpful environment information
+  - Created docs/logging.md with usage examples and best practices
+  - Verbose mode enables debug level + pretty console output
 - **[uncommitted]** (2025-10-28): Created internal package structure
   - Created internal/config/config.go with full config management (load, save, validate)
   - Created internal/context/types.go with context data structures

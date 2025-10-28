@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 
+	"codex/internal/logging"
+
 	"github.com/spf13/cobra"
 )
 
@@ -22,9 +24,7 @@ var configShowCmd = &cobra.Command{
 	Short: "Display current configuration",
 	Long:  `Display the current codex configuration including all paths and settings.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if verbose {
-			fmt.Println("Verbose mode enabled")
-		}
+		logging.Logger.Debug().Msg("Displaying configuration")
 
 		fmt.Println("Codex Configuration")
 		fmt.Println("===================")
@@ -33,6 +33,11 @@ var configShowCmd = &cobra.Command{
 		// Check environment variables
 		nixConfig := os.Getenv("CODEX_NIX_CONFIG")
 		dotfiles := os.Getenv("CODEX_DOTFILES")
+
+		logging.Logger.Debug().
+			Str("nix_config", nixConfig).
+			Str("dotfiles", dotfiles).
+			Msg("Current configuration values")
 
 		fmt.Printf("Nix Config Path:  %s\n", getConfigValue(nixConfig, "not set"))
 		fmt.Printf("Dotfiles Path:    %s\n", getConfigValue(dotfiles, "not set"))
@@ -59,22 +64,34 @@ Examples:
 		key := args[0]
 		value := args[1]
 
-		if verbose {
-			fmt.Printf("Setting %s = %s\n", key, value)
-		}
+		logging.Logger.Debug().
+			Str("key", key).
+			Str("value", value).
+			Msg("Setting configuration value")
 
 		// TODO: Implement actual config file writing
 		// For now, just provide instructions
 		switch key {
 		case "nix-config":
+			logging.Logger.Info().
+				Str("key", "CODEX_NIX_CONFIG").
+				Str("value", value).
+				Msg("Configuration set instruction provided")
 			fmt.Printf("To set nix-config path, add to your shell profile:\n")
 			fmt.Printf("  export CODEX_NIX_CONFIG=\"%s\"\n", value)
 			fmt.Println("\nNote: Config file persistence coming soon")
 		case "dotfiles":
+			logging.Logger.Info().
+				Str("key", "CODEX_DOTFILES").
+				Str("value", value).
+				Msg("Configuration set instruction provided")
 			fmt.Printf("To set dotfiles path, add to your shell profile:\n")
 			fmt.Printf("  export CODEX_DOTFILES=\"%s\"\n", value)
 			fmt.Println("\nNote: Config file persistence coming soon")
 		default:
+			logging.Logger.Error().
+				Str("key", key).
+				Msg("Unknown configuration key")
 			fmt.Fprintf(os.Stderr, "Error: unknown configuration key '%s'\n", key)
 			fmt.Fprintln(os.Stderr, "Supported keys: nix-config, dotfiles")
 			os.Exit(1)

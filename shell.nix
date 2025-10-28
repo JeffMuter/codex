@@ -16,15 +16,41 @@ let
   };
 in
 pkgs.mkShell {
-  buildInputs = with pkgs; [ 
+  buildInputs = with pkgs; [
+    # Go toolchain
     go_1_23
-    goose
-  ] ++ [
+
+    # Go development tools
+    gopls           # Go language server
+    gotools         # goimports, godoc, etc.
+    go-tools        # staticcheck, etc.
+    delve           # Go debugger
+
+    # Database tools
+    goose           # Database migration tool
+    sqlite          # SQLite database
+
+    # Development utilities
     unstable.claude-code
   ];
+
   # Allow unsafe/experimental features
   NIX_CONFIG = ''
     experimental-features = nix-command flakes
     allow-import-from-derivation = true
+  '';
+
+  # Set up Go environment
+  shellHook = ''
+    echo "Codex development environment loaded"
+    echo "Go version: $(go version)"
+    echo "Database: SQLite $(sqlite3 --version | cut -d' ' -f1)"
+    echo ""
+    echo "Available commands:"
+    echo "  go build    - Build the project"
+    echo "  go test     - Run tests"
+    echo "  goose       - Database migrations"
+    echo "  dlv         - Go debugger"
+    echo ""
   '';
 }
